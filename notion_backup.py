@@ -12,30 +12,28 @@ from notify import send
 # ={'spaces':[]} 则备份所有空间 'space_blocks':[] 则备份整个空间
 # block id格式切记为-隔开!!!
 DEFAULT_BACKUP_CONFIG = {
+    # 'spaces': [
+    #     {'space_name': "test"}
+    # ]
     'spaces': [{
-        'space_name': 'space_name',
-        'space_blocks': [{
-            'block_id': '12345678-1234-1234-1234-123456789123',
-            'block_name': 'Home1'
-        }, {
-            'block_id': '12345678-1234-1234-1234-123456789123',
-            'block_name': 'Home2'
-        }]
+        'space_name': "Tianning's Notion",
+        'space_blocks': [{'block_id': '1778ba02-cbb7-4bb4-8fd6-2300efba1168','block_name': 'markdown_notebook'}
+        ]
     }]
 }
 
 # 是否去除所有文件和文件夹的id
-REMOVE_FILES_ID = False
+REMOVE_FILES_ID = True#False
 
 # 默认配置无需更改
 NOTION_TIMEZONE = os.getenv('NOTION_TIMEZONE', 'Asia/Shanghai')
 NOTION_LOCALE = os.getenv('NOTION_TIMEZONE', 'en')
 NOTION_API = os.getenv('NOTION_API', 'https://www.notion.so/api/v3')
 # 邮箱和用户名
-NOTION_EMAIL = os.getenv('NOTION_EMAIL', '')
+NOTION_EMAIL  = os.getenv('NOTION_EMAIL', '')
 NOTION_PASSWORD = os.getenv('NOTION_PASSWORD', '')
 # 修改为浏览器内获取到的token
-NOTION_TOKEN = os.getenv('NOTION_TOKEN', 'YOUR TOKEN')
+NOTION_TOKEN = os.getenv('NOTION_TOKEN', 'v02%3Auser_token_or_cookies%3A0HjfkfI1GmUaVT9ZQmZ85fkIm8TyComxhT-bujeGeZsNrSPeCmn7wWAjvjNU7Mh9gK-wIcfcfFQN4OcsbxxnWnwwqbB5zjF_nslQomo58fFfzyDIaytWttYaO-sOhA96d1a1')
 # 登录后获取 下载文件需要
 NOTION_FILE_TOKEN = ''
 NOTION_EXPORT_TYPE = os.getenv('NOTION_EXPORT_TYPE', 'markdown')  # html pdf
@@ -136,27 +134,6 @@ def exportSpace(spaceId):
         }
     }
 
-
-# {
-#     "task": {
-#         "eventName": "exportBlock",
-#         "request": {
-#             "block": {
-#                 "id": "c093243a-a553-45ae-954f-4bf80d995167",
-#                 "spaceId": "38d3bbb5-37de-4891-86cc-9dcfbafc30d0"
-#             },
-#             "recursive": true,
-#             "exportOptions": {
-#                 "exportType": "markdown",
-#                 "timeZone": "Asia/Shanghai",
-#                 "locale": "en",
-#                 "flattenExportFiletree": false
-#             }
-#         }
-#     }
-# }
-
-
 def exportSpaceBlock(spaceId, blockId):
     return {
         'task': {
@@ -180,7 +157,7 @@ def exportSpaceBlock(spaceId, blockId):
 
 def request_post(endpoint: str, params: object):
     global NOTION_FILE_TOKEN
-    #print('reqeust:{} {}'.format(endpoint, params))
+    print('reqeust:{} {}'.format(endpoint, params))
     try:
         response = requests.post(
             f'{NOTION_API}/{endpoint}',
@@ -294,7 +271,7 @@ def push():
 
 def main():
     # 初始化git仓库
-    initGit()
+    #initGit()
 
     # 初始化Token
     initNotionToken()
@@ -330,7 +307,9 @@ def main():
                     block_id = space_block['block_id']
                     block_name = space_block['block_name']
                     taskId = request_post('enqueueTask', exportSpaceBlock(spaceId, block_id)).get('taskId')
+                    
                     url = exportUrl(taskId)
+                    print(url)
                     downloadAndUnzip(url, f'{spaceName}-{block_name}.zip')
             else:
                 # 没指定space block则备份整个空间
@@ -341,9 +320,9 @@ def main():
             print('space:{}跳过 不在备份列表'.format(spaceName))
 
     # git
-    print('开始提交代码')
-    pull()
-    push()
+    #print('开始提交代码')
+    #pull()
+    #push()
     writeLog('notion备份完成')
 
 
@@ -365,6 +344,42 @@ def run_retry():
 
 
 if __name__ == '__main__':
+
+    # import requests
+    # import os
+    # import datetime
+    # import json
+
+    # timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+    # folder = 'notionbackup_' + timestamp
+
+    # os.mkdir(folder)
+
+    # # replace YOUR_INTEGRATION_TOKEN with your own secret token
+    # headers = {
+    # 'Authorization': 'Bearer secret_BKwdN9LdZKFERa1DSazBJHl71P8FbTDMcukT7bddre8',
+    # 'Notion-Version': '2022-06-28',
+    # 'Content-Type': 'application/json',
+    # }
+
+    # response = requests.post('https://api.notion.com/v1/search', headers=headers)
+
+    # for block in response.json()['results']:
+    #     with open(f'{folder}/{block["id"]}.json', 'w') as file:
+    #         file.write(json.dumps(block))
+
+    # child_blocks = requests.get(
+    #     f'https://api.notion.com/v1/blocks/{block["id"]}/children',
+    #     headers=headers,
+    # )
+    # if child_blocks.json()['results']:
+    #     os.mkdir(folder + f'/{block["id"]}')
+
+    #     for child in child_blocks.json()['results']:
+    #         with open(f'{folder}/{block["id"]}/{child["id"]}.json', 'w') as file:
+    #             file.write(json.dumps(child))
+    # exit()
+
     writeLog('开始执行notion备份')
     parser = argparse.ArgumentParser(description='ArgUtils')
     parser.add_argument('-c',
@@ -387,7 +402,7 @@ if __name__ == '__main__':
             raise Exception('参数格式错误,请检查是否为合法的json字符串:' + str(e))
     else:
         print('使用默认配置 DEFAULT_BACKUP_CONFIG:{}'.format(DEFAULT_BACKUP_CONFIG))
-
+    #raise
     run_retry()
 
 # 定时定点执行
